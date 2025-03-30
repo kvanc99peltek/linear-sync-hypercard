@@ -17,11 +17,15 @@ def extract_assignee(enriched_report):
     Looks for a line like: **Recommended Assignee:** Bhavik Patel (Founding Engineer)
     Returns the assignee's name without the role details in parentheses.
     """
-    match = re.search(r"\*\*Recommended Assignee:\*\*\s*(.+)", enriched_report)
+    match = re.search(r"\*\*Recommended Assignee:\*\*\s*([^(\n]+)", enriched_report)
     if match:
-        assignee_line = match.group(1).strip()
-        # Remove details in parentheses.
-        return re.sub(r"\s*\(.*\)$", "", assignee_line).strip()
+        # Get the full name and remove any trailing spaces
+        name = match.group(1).strip()
+        # Remove any text in parentheses and surrounding whitespace
+        name = re.sub(r'\s*\([^)]*\)', '', name).strip()
+        # Remove any role/title that might come after a dash or comma
+        name = re.split(r'[-,]', name)[0].strip()
+        return name
     return None
 
 def extract_labels(enriched_report):

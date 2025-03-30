@@ -1,7 +1,6 @@
 import os
 import requests
 import json
-import re
 from threading import Thread
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
@@ -19,40 +18,35 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # Initialize Slack Bolt app using your Bot token.
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
-def enrich_bug_report(raw_text, screenshot_urls=None):
+def enrich_bug_report(raw_text, attachment_urls=None):
     prompt = (
         "You are the best AI product manager. Read the following raw bug report and produce "
         "a structured ticket with the following exact format:\n\n"
         "**Title:** <a concise summary of the issue>\n\n"
         "**Description:** <detailed explanation of the bug>\n\n"
         "**Priority:** <Urgent, High, Medium, or Low>\n\n"
-        "**Recommended Assignee:** <choose the team member best suited from the list below. "
-        "Do not assign Peter Kelly or Marc Baghadjian.>\n\n"
+        "**Recommended Assignee:** <choose the team member best suited>\n\n"
         "**Steps to Reproduce:**\n<list each step on its own line>\n\n"
         "**Expected Behavior:** <what should happen>\n\n"
         "**Actual Behavior:** <what is happening>\n\n"
-        "**Labels:** <choose one from: Bug Bot, In QA, Internal Admin, Core Web, Core Mobile, Backend>\n\n"
-        "**Attachments:** <if any, present them in the format [Screenshot of the issue](URL)>\n\n"
+        "**Labels:** <choose one: Bug, Feature, or Improvement>\n\n"
+        "**Attachments:** <if any, present them in the format [Attachment](URL)>\n\n"
         "Team Members:\n"
         "1. **Nikolas Ioannou (Co-Founder):** Best for strategic challenges and high-level product decisions.\n"
         "2. **Bhavik Patel (Founding Engineer):** Best for addressing core functionality issues and backend performance problems.\n"
-        "3. **Rushil Nagarsheth (Founding Engineer):** Best for managing infrastructure challenges and system integrations.\n"
-        "4. **Aaron (Senior Frontend Lead):** Expert in frontend development and design.\n"
-        "5. **Manas Garg (Software Engineer Intern):** Supports core development tasks.\n"
-        "6. **Ale (Creative Director):** Focused on creative and design improvements.\n"
-        "7. **Peter Kelly:** Do not assign.\n"
-        "8. **Marc Baghadjian (CEO):** Do not assign.\n\n"
+        "3. **Rushil Nagarsheth (Founding Engineer):** Best for managing infrastructure challenges and system integrations.\n\n"
         "Raw Bug Report:\n"
         f"{raw_text}\n"
     )
     
-    if screenshot_urls:
+    # Append attachments (images and videos) as markdown links.
+    if attachment_urls:
         prompt += (
-            "\nPlease include each screenshot as a Markdown link in the 'Attachments' section, "
-            "for example: [Screenshot of the issue](URL).\nHere are the screenshot URLs:\n"
+            "\nPlease include each attachment as a Markdown link in the 'Attachments:' section, "
+            "using the format `[Attachment](URL)` for each item.\nHere are the attachment URLs:\n"
         )
-        for url in screenshot_urls:
-            prompt += f"- {url}\n"
+        for url in attachment_urls:
+            prompt += f"- [Attachment]({url})\n"
 
     response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
@@ -60,8 +54,8 @@ def enrich_bug_report(raw_text, screenshot_urls=None):
             {
                 "role": "system",
                 "content": (
-                    "You format bug reports into a structured ticket format with the specified style. "
-                    "Make sure your final output exactly follows the Markdown headings as given."
+                    "You format bug reports into a structured ticket exactly following the Markdown format provided. "
+                    "Do not alter the markdown syntax."
                 )
             },
             {"role": "user", "content": prompt}
@@ -82,40 +76,41 @@ def create_linear_ticket(enriched_report):
     assignee_name = extract_assignee(enriched_report)
     labels = extract_labels(enriched_report)
     if not labels:
-        labels = ["Bug Bot"]
+        labels = ["Bug"]
     
     priority_map = {"low": 0, "medium": 1, "high": 2}
     priority = priority_map.get(priority_str.lower(), 1) if priority_str else 1
     
-    # Updated assignee mapping.
+    # Normalize assignee name for case-insensitive matching.
+    assignee_name = assignee_name.lower() if assignee_name else ""
     ASSIGNEE_MAP = {
-        "Nikolas Ioannou": "93d4b23a-0c5a-4dc1-81d8-45d82684e9d4",
-        "Bhavik Patel": "14543ff1-21dd-4e1d-ad23-bbf33d814ac0",
-        "Rushil Nagarsheth": "094f80e8-8853-40ca-837f-81e0b2b2b07f",
-        "Aaron": "f5bc2d04-c905-4aa2-a25f-bbaa1e4af763",
-        "Manas Garg": "f45b97b1-8bd2-4501-b73e-b4e427df5adb",
-        "Ale": "3f2240c8-16c2-4521-b563-a552fb850c21",
-        "Peter Kelly": None,
-        "Marc Baghadjian": None
+        # "marc": "67f71f55-ac95-4ee8-ba21-487201aa8b59",
+        # "peter": "49a07047-9dad-45bf-a9cc-822509a3e966",
+        # "ale1": "3f2240c8-16c2-4521-b563-a552fb850c21",
+        # "manas": "fd2f5400-4be6-4fd9-89bd-c86eb9b28e9c",
+        # "aaron": "f5bc2d04-c905-4aa2-a25f-bbaa1e4af763",
+        "rushil": "094f80e8-8853-40ca-837f-81e0b2b2b07f",
+        "bhavik": "14543ff1-21dd-4e1d-ad23-bbf33d814ac0",
+        "nikolas ioannou": "93d4b23a-0c5a-4dc1-81d8-45d82684e9d4"
+
+
     }
-    assignee_id = ASSIGNEE_MAP.get(assignee_name)
     
-    # Mapping from label names (as output by GPT) to Linear label IDs using environment variables.
+    assignee_id = ASSIGNEE_MAP.get(assignee_name)
+    print("Extracted assignee:", assignee_name)
+    
     TICKET_TYPE_MAP = {
-        "Bug Bot": os.getenv("LINEAR_BUG_LABEL_ID", "dfcf45d1-f4a4-4ab8-8aef-3960defc8450"),
-        "In QA": os.getenv("LINEAR_IN_QA_LABEL_ID", "ce778bdc-39e1-4a1b-a546-488fde56252b"),
-        "Internal Admin": os.getenv("LINEAR_INTERNAL_ADMIN_LABEL_ID", "031c70bb-cc93-40ec-a3dd-7ed36bc19b23"),
-        "Core Web": os.getenv("LINEAR_CORE_WEB_LABEL_ID", "1d8a8a3d-5813-439f-a421-641875357c99"),
-        "Core Mobile": os.getenv("LINEAR_CORE_MOBILE_LABEL_ID", "361e454d-9f41-494f-95ad-04301dbb3231"),
-        "Backend": os.getenv("LINEAR_BACKEND_LABEL_ID", "c3aa8f63-f8c8-4d22-915e-6ddab30829d7")
+        "Bug": os.getenv("LINEAR_BUG_LABEL_ID", "74ecf219-8bfd-4944-b106-4b42273f84a8"),
+        "Feature": os.getenv("LINEAR_FEATURE_LABEL_ID", "504d1625-23fb-41ac-afea-e46bcabb4e53"),
+        "Improvement": os.getenv("LINEAR_IMPROVEMENT_LABEL_ID", "3688793e-2c4c-4e5b-a261-81f365f283f8")
     }
     mapped_labels = []
     for label in labels:
-        normalized = label.strip()
+        normalized = label.strip().capitalize()
         if normalized in TICKET_TYPE_MAP:
             mapped_labels.append(TICKET_TYPE_MAP[normalized])
     if not mapped_labels:
-        mapped_labels = [TICKET_TYPE_MAP["Bug Bot"]]
+        mapped_labels = [TICKET_TYPE_MAP["Bug"]]
     
     variables = {
         "input": {
@@ -162,20 +157,21 @@ def create_linear_ticket(enriched_report):
 def handle_bug_report(message, say, logger):
     user = message.get("user")
     text = message.get("text", "")
-    screenshot_urls = []
+    
+    # Collect attachments (both images and videos) using Slack's private URLs.
+    attachment_urls = []
     files = message.get("files", [])
     if files:
-        screenshot_urls = [
-            f.get("url_private")
-            for f in files
-            if f.get("mimetype", "").startswith("image/")
-        ]
-        logger.info(f"File share from {user}: {screenshot_urls}")
+        for f in files:
+            mimetype = f.get("mimetype", "")
+            if mimetype.startswith("image/") or mimetype.startswith("video/"):
+                attachment_urls.append(f.get("url_private"))
+        logger.info(f"Attachments from {user}: {attachment_urls}")
     
     logger.info(f"Bug report received from {user}: {text}")
     
     try:
-        enriched_report = enrich_bug_report(text, screenshot_urls)
+        enriched_report = enrich_bug_report(text, attachment_urls)
         logger.info(f"Enriched Report: {enriched_report}")
     except Exception as e:
         logger.error(f"Error enriching bug report: {e}")
@@ -202,8 +198,17 @@ def handle_app_mention(event, say, logger):
     thread_ts = event.get("ts")
     logger.info(f"Bot was mentioned by {user}: {text}")
     
+    # Extract attachments if present in the event (similar to bug! handler)
+    attachment_urls = []
+    if "files" in event:
+        for f in event["files"]:
+            mimetype = f.get("mimetype", "")
+            if mimetype.startswith("image/") or mimetype.startswith("video/"):
+                attachment_urls.append(f.get("url_private"))
+        logger.info(f"Attachments from {user}: {attachment_urls}")
+    
     try:
-        enriched_report = enrich_bug_report(text)
+        enriched_report = enrich_bug_report(text, attachment_urls)
         ticket = create_linear_ticket(enriched_report)
         response_message = f"Thanks for reporting the bug, <@{user}>! A ticket has been created in Linear: {ticket.get('url', 'URL not available')}"
     except Exception as e:
@@ -212,7 +217,7 @@ def handle_app_mention(event, say, logger):
     
     say(text=response_message, thread_ts=thread_ts)
 
-# Minimal Flask app to bind to the $PORT for Heroku.
+# Minimal Flask app to bind to the $PORT for Heroku
 flask_app = Flask(__name__)
 
 @flask_app.route("/")
@@ -229,5 +234,5 @@ if __name__ == "__main__":
     bot_thread.start()
     
     # Bind Flask to the $PORT provided by Heroku.
-    port = int(os.environ.get("PORT", 5001))
+    port = int(os.environ.get("PORT", 5002))
     flask_app.run(host="0.0.0.0", port=port)
