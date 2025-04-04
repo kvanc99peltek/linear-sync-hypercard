@@ -22,14 +22,11 @@ def enrich_bug_report(raw_text, attachment_urls=None):
     prompt = (
         "You are the best AI product manager. Read the following raw bug report and produce "
         "a structured ticket with the following exact format:\n\n"
-        "**Title:** <a concise summary of the issue>\n\n"
         "**Description:** <detailed explanation of the bug>\n\n"
         "**Priority:** <Urgent, High, Medium, or Low>\n\n"
         "**Recommended Assignee:** <choose the team member best suited>\n\n"
-        "**Steps to Reproduce:**\n<list each step on its own line>\n\n"
-        "**Expected Behavior:** <what should happen>\n\n"
-        "**Actual Behavior:** <what is happening>\n\n"
         "**Labels:** <choose one: Bug, Feature, or Improvement>\n\n"
+        "**Title:** <a concise summary of the issue>\n\n"
         "**Attachments:** <if any, present them in the format [Attachment](URL)>\n\n"
         "Team Members:\n"
         "1. **Nikolas Ioannou (Co-Founder):** Best for strategic challenges and high-level product decisions.\n"
@@ -84,11 +81,11 @@ def create_linear_ticket(enriched_report):
     # Normalize assignee name for case-insensitive matching.
     assignee_name = assignee_name.lower() if assignee_name else ""
     ASSIGNEE_MAP = {
-        # "marc": "67f71f55-ac95-4ee8-ba21-487201aa8b59",
-        # "peter": "49a07047-9dad-45bf-a9cc-822509a3e966",
-        # "ale1": "3f2240c8-16c2-4521-b563-a552fb850c21",
-        # "manas": "fd2f5400-4be6-4fd9-89bd-c86eb9b28e9c",
-        # "aaron": "f5bc2d04-c905-4aa2-a25f-bbaa1e4af763",
+        "marc": "67f71f55-ac95-4ee8-ba21-487201aa8b59",
+        "peter": "49a07047-9dad-45bf-a9cc-822509a3e966",
+        "ale1": "3f2240c8-16c2-4521-b563-a552fb850c21",
+        "manas": "fd2f5400-4be6-4fd9-89bd-c86eb9b28e9c",
+        "aaron": "f5bc2d04-c905-4aa2-a25f-bbaa1e4af763",
         "rushil": "094f80e8-8853-40ca-837f-81e0b2b2b07f",
         "bhavik": "14543ff1-21dd-4e1d-ad23-bbf33d814ac0",
         "nikolas ioannou": "93d4b23a-0c5a-4dc1-81d8-45d82684e9d4"
