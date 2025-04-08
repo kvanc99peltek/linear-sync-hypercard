@@ -84,16 +84,11 @@ def create_linear_ticket(enriched_report):
     # Normalize assignee name for case-insensitive matching.
     assignee_name = assignee_name.lower() if assignee_name else ""
     ASSIGNEE_MAP = {
-        "nikolas ioannou": "a788f89f-f3cd-4a56-8194-b2986a91f306",
-        "bhavik patel": "4c6b43ac-b384-42eb-8715-cfa156f58400",
         "nikolas ioannou": "93d4b23a-0c5a-4dc1-81d8-45d82684e9d4",
+        "bhavik": "14543ff1-21dd-4e1d-ad23-bbf33d814ac0",
         "rushil": "094f80e8-8853-40ca-837f-81e0b2b2b07f",
         "manas": "fd2f5400-4be6-4fd9-89bd-c86eb9b28e9c",
         "aaron": "f5bc2d04-c905-4aa2-a25f-bbaa1e4af763",
-        "bhavik": "14543ff1-21dd-4e1d-ad23-bbf33d814ac0",
-        # "marc": "67f71f55-ac95-4ee8-ba21-487201aa8b59",
-        # "peter": "49a07047-9dad-45bf-a9cc-822509a3e966",
-        #"manas": "fd2f5400-4be6-4fd9-89bd-c86eb9b28e9c",
     }
     
     assignee_id = ASSIGNEE_MAP.get(assignee_name)
@@ -187,5 +182,5 @@ if __name__ == "__main__":
     bot_thread.start()
     
     # Bind Flask to the $PORT provided by Heroku.
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5003))
     flask_app.run(host="0.0.0.0", port=port)
