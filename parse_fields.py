@@ -79,15 +79,7 @@ if __name__ == "__main__":
     **Recommended Assignee:** Bhavik Patel (Founding Engineer)
 
     **Labels:** bug, ui
-
-    **Steps to Reproduce:**
-    1. Navigate to the homepage.
-    2. Observe the carousel.
-    3. Wait to see if the images cycle automatically.
-
-    **Expected Behavior:** The carousel should automatically cycle through the images.
-
-    **Actual Behavior:** The carousel remains static, displaying only the first image.
+    
     """
     print("Extracted Title:", extract_title(sample_report))
     print("Extracted Priority:", extract_priority(sample_report))
