@@ -1,5 +1,17 @@
 import re
 
+def extract_description(enriched_report):
+    """
+    Extracts the Description from the enriched report.
+    Looks for a section starting with "**Description:**" and ending at the next header (a line that starts with "**")
+    or the end of the text.
+    Returns the extracted description or a default message if not found.
+    """
+    match = re.search(r"\*\*Description:\*\*\s*(.+?)(?=\n\*\*|$)", enriched_report, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return "No description provided."
+
 def extract_priority(enriched_report):
     """
     Extracts the Priority from the enriched report.
@@ -79,7 +91,7 @@ if __name__ == "__main__":
     **Recommended Assignee:** Bhavik Patel (Founding Engineer)
 
     **Labels:** bug, ui
-    
+
     """
     print("Extracted Title:", extract_title(sample_report))
     print("Extracted Priority:", extract_priority(sample_report))
