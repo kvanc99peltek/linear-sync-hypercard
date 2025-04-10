@@ -7,9 +7,10 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from flask import Flask
 from dotenv import load_dotenv
-from openai import OpenAI
 
+from openai import OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 from parse_fields import extract_title, extract_priority, extract_assignee, extract_labels, extract_description
 
 
