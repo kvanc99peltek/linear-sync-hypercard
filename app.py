@@ -89,9 +89,10 @@ def create_linear_ticket(enriched_report):
         "rushil": "094f80e8-8853-40ca-837f-81e0b2b2b07f",
         "manas": "fd2f5400-4be6-4fd9-89bd-c86eb9b28e9c",
         "aaron": "f5bc2d04-c905-4aa2-a25f-bbaa1e4af763",
+        "ale": "fd2f5400-4be6-4fd9-89bd-c86eb9b28e9c"  # Adding Ale as default assignee
     }
     
-    assignee_id = ASSIGNEE_MAP.get(assignee_name)
+    assignee_id = ASSIGNEE_MAP.get(assignee_name, ASSIGNEE_MAP["ale"])  # Use Ale as default if no assignee found
     print("Extracted assignee:", assignee_name)
     
     TICKET_TYPE_MAP = {
