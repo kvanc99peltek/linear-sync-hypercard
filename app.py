@@ -175,13 +175,13 @@ def handle_app_mention(event, say, logger):
     say(text=response_message, thread_ts=thread_ts)
 
 @app.event("message")
-def handle_message_events(event, logger):
+def handle_message_events(body, logger):
     """
     Handle message events that aren't mentions.
     This prevents the "Unhandled request" warnings in the logs.
     """
-    # Log the message for debugging purposes
-    logger.debug(f"Received message event: {event.get('text', '')}")
+    # Log the full body for debugging purposes
+    logger.info(body)
     # No response needed for regular messages
 
 # Minimal Flask app to bind to the $PORT for Heroku.
