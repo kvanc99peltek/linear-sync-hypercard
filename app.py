@@ -164,6 +164,15 @@ def handle_app_mention(event, say, logger):
     thread_ts = event.get("ts")
     logger.info(f"Bot was mentioned by {user}: {text}")
 
+    # Remove the bot mention from the text to get the actual message
+    message_text = text.replace(f"<@{os.environ.get('SLACK_BOT_USER_ID')}>", "").strip()
+    
+    # Check if the message has sufficient content
+    if len(message_text) < 10:
+        response_message = f"Sorry <@{user}>, your bug report needs more detail. Please provide a clearer description of the issue (at least 10 characters)."
+        say(text=response_message, thread_ts=thread_ts)
+        return
+
     try:
         enriched_report = enrich_bug_report(text)
         ticket = create_linear_ticket(enriched_report)
