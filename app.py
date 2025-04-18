@@ -69,7 +69,7 @@ def validate_bug_report_context(raw_text):
     Returns (is_valid, error_message) tuple.
     """
     # Check if the text is too short
-    if len(raw_text.strip()) < 20:
+    if len(raw_text.strip()) < 10:
         return False, "Please provide more details about the issue. A good bug report should include what you were trying to do, what happened, and what you expected to happen."
     
     return True, None
