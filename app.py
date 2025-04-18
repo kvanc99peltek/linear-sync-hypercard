@@ -63,6 +63,17 @@ def enrich_bug_report(raw_text):
 
     return ticket
 
+def validate_bug_report_context(raw_text):
+    """
+    Validates if the bug report has sufficient context based on length.
+    Returns (is_valid, error_message) tuple.
+    """
+    # Check if the text is too short
+    if len(raw_text.strip()) < 20:
+        return False, "Please provide more details about the issue. A good bug report should include what you were trying to do, what happened, and what you expected to happen."
+    
+    return True, None
+
 def create_linear_ticket(enriched_report):
     LINEAR_API_KEY = os.getenv("LINEAR_API_KEY")
     LINEAR_TEAM_ID = os.getenv("LINEAR_TEAM_ID")
@@ -100,7 +111,7 @@ def create_linear_ticket(enriched_report):
 
     TICKET_TYPE_MAP = {
         "Bug": os.getenv("LINEAR_BUG_LABEL_ID", "dfcf45d1-f4a4-4ab8-8aef-3960defc8450"),
-        "Bug Bot": os.getenv("LINEAR_BUG_LABEL_ID", "dfcf45d1-f4a4-4ab8-8aef-3960defc8450"),
+        # "Bug Bot": os.getenv("LINEAR_BUG_LABEL_ID", "dfcf45d1-f4a4-4ab8-8aef-3960defc8450"), (Not needed for now)
         "In QA": os.getenv("LINEAR_IN_QA_LABEL_ID", "ce778bdc-39e1-4a1b-a546-488fde56252b"),
         "Internal Admin": os.getenv("LINEAR_INTERNAL_ADMIN_LABEL_ID", "031c70bb-cc93-40ec-a3dd-7ed36bc19b23"),
         "Core Web": os.getenv("LINEAR_CORE_WEB_LABEL_ID", "1d8a8a3d-5813-439f-a421-641875357c99"),
@@ -165,9 +176,21 @@ def handle_app_mention(event, say, logger):
     logger.info(f"Bot was mentioned by {user}: {text}")
 
     try:
+        # First validate the bug report context
+        is_valid, error_message = validate_bug_report_context(text)
+        if not is_valid:
+            say(text=f"<@{user}> {error_message}", thread_ts=thread_ts)
+            return
+
         enriched_report = enrich_bug_report(text)
-        ticket = create_linear_ticket(enriched_report)
-        response_message = f"Thanks for reporting the bug, <@{user}>! A ticket has been created in Linear: {ticket.get('url', 'URL not available')}"
+        
+        # Check if the enriched report is an error message (string)
+        if isinstance(enriched_report, str):
+            response_message = f"<@{user}> {enriched_report}"
+        else:
+            ticket = create_linear_ticket(enriched_report)
+            response_message = f"Thanks for reporting the bug, <@{user}>! A ticket has been created in Linear: {ticket.get('url', 'URL not available')}"
+            
     except Exception as e:
         logger.error(f"Error processing bug report from mention: {e}")
         response_message = f"Sorry <@{user}>, there was an error processing your bug report."
@@ -181,8 +204,18 @@ def handle_message_events(body, logger):
     This prevents the "Unhandled request" warnings in the logs.
     """
     # Log the full body for debugging purposes
-    logger.info(body)
+    logger.info(f"Received message event: {body}")
     # No response needed for regular messages
+
+@app.event("message_changed")
+def handle_message_changed_events(body, logger):
+    """
+    Handle message change events.
+    This prevents the "Unhandled request" warnings in the logs.
+    """
+    # Log the full body for debugging purposes
+    logger.info(f"Received message changed event: {body}")
+    # No response needed for message changes
 
 # Minimal Flask app to bind to the $PORT for Heroku.
 flask_app = Flask(__name__)
