@@ -8,18 +8,16 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from flask import Flask
 from dotenv import load_dotenv
 
+# Load environment variables from the .env file first
+load_dotenv()
+
+# Initialize OpenAI client after loading env vars
 from openai import OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 from parse_fields import extract_title, extract_priority, extract_assignee, extract_labels, extract_description
 
-
-# Load environment variables from the .env file.
-load_dotenv()
-
-# Set OpenAI API key.
-
-# Initialize Slack Bolt app using your Bot token.
+# Initialize Slack Bolt app using your Bot token
 app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 
 def enrich_bug_report(raw_text):
@@ -162,19 +160,31 @@ def handle_app_mention(event, say, logger):
     user = event.get("user")
     text = event.get("text", "")
     thread_ts = event.get("ts")
-    logger.info(f"Bot was mentioned by {user}: {text}")
-
-    # Remove the bot mention from the text to get the actual message
-    message_text = text.replace(f"<@{os.environ.get('SLACK_BOT_USER_ID')}>", "").strip()
     
-    # Check if the message has sufficient content
+    # Clean the message text once using regex
+    bot_id = os.getenv("SLACK_BOT_USER_ID")
+    if not bot_id:
+        logger.error("SLACK_BOT_USER_ID not found in environment variables")
+        say(
+            text=f"Sorry <@{user}>, there was an error processing your message.",
+            thread_ts=thread_ts
+        )
+        return
+        
+    message_text = re.sub(rf"<@{bot_id}>\s*", "", text).strip()
+    logger.info(f"Cleaned message_text: {message_text!r}")
+
+    # Check minimum length requirement
     if len(message_text) < 10:
-        response_message = f"Sorry <@{user}>, your bug report needs more detail. Please provide a clearer description of the issue (at least 10 characters)."
-        say(text=response_message, thread_ts=thread_ts)
+        say(
+            text=f"Sorry <@{user}>, your bug report needs more detail (at least 10 characters).",
+            thread_ts=thread_ts
+        )
         return
 
     try:
-        enriched_report = enrich_bug_report(text)
+        # Pass the cleaned message_text to enrich_bug_report
+        enriched_report = enrich_bug_report(message_text)
         ticket = create_linear_ticket(enriched_report)
         response_message = f"Thanks for reporting the bug, <@{user}>! A ticket has been created in Linear: {ticket.get('url', 'URL not available')}"
     except Exception as e:
